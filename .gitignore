@@ -218,3 +218,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ------------------------------------------------------------
+# Projeto: Painel Macroeconômico BACEN
+# ------------------------------------------------------------
+# Obs.: .streamlit/secrets.toml já está ignorado acima (modelo Python do GitHub)
+
+# Arquivos do sistema operacional e editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
