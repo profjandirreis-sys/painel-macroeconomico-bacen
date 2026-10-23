@@ -8,6 +8,7 @@ PASTA_DADOS = RAIZ / "data"
 PASTA_BRUTOS = PASTA_DADOS / "raw"
 PASTA_TRATADOS = PASTA_DADOS / "processed"
 ARQUIVO_BASE = PASTA_TRATADOS / "macro_mensal.csv"
+ARQUIVO_INDICADORES = PASTA_TRATADOS / "macro_indicadores.csv"
 
 # Período obrigatório da Linha 3 do enunciado
 DATA_INICIAL = "01/01/2019"
