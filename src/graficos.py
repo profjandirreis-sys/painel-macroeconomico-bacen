@@ -6,12 +6,14 @@
 4. IBC-Br dessazonalizado
 5. Heatmap de correlação de Pearson com valores anotados
 
-Todos os gráficos usam a base já filtrada e estão em português
-(títulos, eixos, legendas, tooltips e separador decimal com vírgula).
+Todos os gráficos são construídos com Plotly Express (px.bar, px.line, px.scatter,
+px.imshow), usam a base já filtrada e estão em português (títulos, eixos, legendas,
+tooltips e separador decimal com vírgula).
 """
 
 import pandas as pd
-import plotly.graph_objects as go
+import plotly.express as px
+import plotly.graph_objects as go  # usado só para a anotação de tipo (go.Figure)
 import streamlit as st
 
 from src import storytelling as story
@@ -62,26 +64,31 @@ def com_lacunas(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------- 1. Política monetária ----------------
+LINHAS_POLITICA = {"selic_meta": "Selic Meta", "ipca_12m": "IPCA 12 meses"}
+
+
 def grafico_politica_monetaria(df: pd.DataFrame, indicadores: list) -> go.Figure:
-    fig = go.Figure()
-    if "selic_meta" in indicadores and "ipca_12m" in indicadores:
-        fig.add_bar(
-            x=df["data"], y=df["juro_real_ex_post"], name="Juro Real Ex-Post",
-            marker_color=VERDE_AGUA, opacity=0.55,
-            hovertemplate="%{y:.2f}% a.a.",
-        )
-    if "selic_meta" in indicadores:
-        fig.add_scatter(
-            x=df["data"], y=df["selic_meta"], name="Selic Meta", mode="lines",
-            line=dict(color=AZUL, width=2.5, shape="hv"),
-            hovertemplate="%{y:.2f}% a.a.",
-        )
-    if "ipca_12m" in indicadores:
-        fig.add_scatter(
-            x=df["data"], y=df["ipca_12m"], name="IPCA 12 meses", mode="lines",
-            line=dict(color=LARANJA, width=2.5),
-            hovertemplate="%{y:.2f}%",
-        )
+    # Linhas (px.line) em formato longo: uma linha por indicador
+    colunas = [c for c in LINHAS_POLITICA if c in indicadores]
+    longo = df.melt(id_vars="data", value_vars=colunas, var_name="indicador", value_name="valor")
+    longo["indicador"] = longo["indicador"].map(LINHAS_POLITICA)
+    linhas = px.line(
+        longo, x="data", y="valor", color="indicador",
+        color_discrete_map={"Selic Meta": AZUL, "IPCA 12 meses": LARANJA},
+    )
+    linhas.update_traces(line_width=2.5)
+    linhas.update_traces(line_shape="hv", hovertemplate="%{y:.2f}% a.a.", selector=dict(name="Selic Meta"))
+    linhas.update_traces(hovertemplate="%{y:.2f}%", selector=dict(name="IPCA 12 meses"))
+
+    # Barras do juro real (px.bar), só quando Selic e IPCA estão selecionados
+    if {"selic_meta", "ipca_12m"} <= set(indicadores):
+        fig = px.bar(df, x="data", y="juro_real_ex_post", opacity=0.55,
+                     color_discrete_sequence=[VERDE_AGUA])
+        fig.update_traces(name="Juro Real Ex-Post", showlegend=True, hovertemplate="%{y:.2f}% a.a.")
+        fig.add_traces(linhas.data)  # barras atrás, linhas na frente
+    else:
+        fig = linhas
+
     fig.update_xaxes(tickformat=FORMATO_MES, hoverformat=FORMATO_MES)
     fig.update_layout(bargap=0.15)
     return _layout(fig, "Selic, inflação e juro real", "% (taxa)")
@@ -90,10 +97,10 @@ def grafico_politica_monetaria(df: pd.DataFrame, indicadores: list) -> go.Figure
 # ---------------- 2. Dólar PTAX ----------------
 def grafico_dolar(df: pd.DataFrame) -> go.Figure:
     media = df["dolar_ptax"].mean()
-    fig = go.Figure()
-    fig.add_scatter(
-        x=df["data"], y=df["dolar_ptax"], name="Dólar PTAX (média do mês)", mode="lines+markers",
-        line=dict(color=AZUL, width=2.5), marker=dict(size=6, line=dict(color="white", width=1)),
+    fig = px.line(df, x="data", y="dolar_ptax", markers=True, color_discrete_sequence=[AZUL])
+    fig.update_traces(
+        name="Dólar PTAX (média do mês)", line_width=2.5,
+        marker=dict(size=6, line=dict(color="white", width=1)),
         hovertemplate="R$ %{y:.4f}",
     )
     fig.add_hline(
@@ -108,26 +115,26 @@ def grafico_dolar(df: pd.DataFrame) -> go.Figure:
 
 # ---------------- 3. Dispersão Dólar × IPCA ----------------
 def grafico_dispersao(df: pd.DataFrame) -> go.Figure:
-    fig = go.Figure()
-    anos = sorted(df["ano"].unique())
-    # tamanho da bolha proporcional à Selic (mesma escala para todos os anos)
-    tamanho_max = df["selic_meta"].max()
-    for ano in anos:
-        parte = df[df["ano"] == ano]
-        cor = RAMPA_ANOS[(ano - 2019) % len(RAMPA_ANOS)]  # cor fixa por ano: não muda com o filtro
-        fig.add_scatter(
-            x=parte["dolar_ptax"], y=parte["ipca_12m"], name=str(ano), mode="markers",
-            marker=dict(
-                color=cor, size=parte["selic_meta"], sizemode="area",
-                sizeref=2.0 * tamanho_max / (34 ** 2), sizemin=6,
-                line=dict(color="white", width=1.5), opacity=0.9,
-            ),
-            customdata=parte[["data", "selic_meta"]].assign(data=parte["data"].dt.strftime(FORMATO_MES)),
-            hovertemplate=(
-                "<b>%{customdata[0]}</b><br>Dólar: R$ %{x:.4f}<br>IPCA 12M: %{y:.2f}%"
-                "<br>Selic: %{customdata[1]:.2f}% a.a.<extra></extra>"
-            ),
-        )
+    base = df.assign(
+        ano_texto=df["ano"].astype(str),
+        mes_texto=df["data"].dt.strftime(FORMATO_MES),
+    )
+    # cor fixa por ano (não muda com o filtro): 2019 = azul claro ... 2023 = azul escuro
+    anos = sorted(base["ano"].unique())
+    cores = {str(a): RAMPA_ANOS[(a - 2019) % len(RAMPA_ANOS)] for a in anos}
+    fig = px.scatter(
+        base, x="dolar_ptax", y="ipca_12m",
+        color="ano_texto", size="selic_meta", size_max=24,  # bolha maior = Selic mais alta
+        color_discrete_map=cores, category_orders={"ano_texto": [str(a) for a in anos]},
+        custom_data=["mes_texto", "selic_meta"],
+    )
+    fig.update_traces(
+        marker=dict(sizemin=6, line=dict(color="white", width=1.5), opacity=0.9),
+        hovertemplate=(
+            "<b>%{customdata[0]}</b><br>Dólar: R$ %{x:.4f}<br>IPCA 12M: %{y:.2f}%"
+            "<br>Selic: %{customdata[1]:.2f}% a.a.<extra></extra>"
+        ),
+    )
     _layout(fig, "Dólar × inflação (tamanho da bolha = Selic)", "IPCA 12 meses (%)", "Dólar PTAX (R$)")
     # itemsizing constante: na legenda todas as bolinhas têm o mesmo tamanho (a cor é o que identifica o ano)
     fig.update_layout(
@@ -140,10 +147,10 @@ def grafico_dispersao(df: pd.DataFrame) -> go.Figure:
 
 # ---------------- 4. IBC-Br ----------------
 def grafico_ibc_br(df: pd.DataFrame) -> go.Figure:
-    fig = go.Figure()
-    fig.add_scatter(
-        x=df["data"], y=df["ibc_br"], name="IBC-Br dessazonalizado", mode="lines",
-        line=dict(color=AZUL, width=2.5), fill="tozeroy", fillcolor="rgba(42,120,214,0.08)",
+    fig = px.line(df, x="data", y="ibc_br", color_discrete_sequence=[AZUL])
+    fig.update_traces(
+        name="IBC-Br dessazonalizado", line_width=2.5,
+        fill="tozeroy", fillcolor="rgba(42,120,214,0.08)",
         hovertemplate="%{y:.2f} pontos",
     )
     fig.update_xaxes(tickformat=FORMATO_MES, hoverformat=FORMATO_MES)
@@ -165,17 +172,21 @@ def variaveis_correlacao(indicadores: list) -> dict:
 def grafico_correlacao(df: pd.DataFrame, indicadores: list) -> go.Figure:
     matriz = matriz_correlacao(df, variaveis_correlacao(indicadores))
     texto = matriz.map(lambda v: "–" if pd.isna(v) else f"{v:.2f}".replace(".", ","))
-    fig = go.Figure(go.Heatmap(
-        z=matriz.values, x=matriz.columns, y=matriz.index,
-        zmin=-1, zmax=1, colorscale=ESCALA_CORRELACAO,
+    fig = px.imshow(
+        matriz, zmin=-1, zmax=1, aspect="auto",
+        color_continuous_scale=ESCALA_CORRELACAO,
+    )
+    fig.update_traces(
         text=texto.values, texttemplate="%{text}", textfont=dict(size=15),
         xgap=2, ygap=2,
-        colorbar=dict(title="r", tickvals=[-1, -0.5, 0, 0.5, 1], ticktext=["−1", "−0,5", "0", "0,5", "1"]),
         hovertemplate="%{y} × %{x}<br>Correlação: %{text}<extra></extra>",
-    ))
+    )
     _layout(fig, "Correlação de Pearson entre os indicadores", "", "")
-    fig.update_layout(hovermode="closest", height=480)
-    fig.update_yaxes(autorange="reversed", showgrid=False)
+    fig.update_layout(
+        hovermode="closest", height=480,
+        coloraxis_colorbar=dict(title="r", tickvals=[-1, -0.5, 0, 0.5, 1], ticktext=["−1", "−0,5", "0", "0,5", "1"]),
+    )
+    fig.update_yaxes(showgrid=False)  # px.imshow já coloca a 1ª linha no topo
     fig.update_xaxes(side="bottom", ticks="")
     return fig
 
