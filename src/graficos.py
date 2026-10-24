@@ -51,6 +51,15 @@ def _layout(fig: go.Figure, titulo: str, eixo_y: str, eixo_x: str = "Mês") -> g
     return fig
 
 
+def com_lacunas(df: pd.DataFrame) -> pd.DataFrame:
+    """Completa os meses que ficaram fora do filtro com valores vazios.
+
+    Assim, se o usuário escolher anos não seguidos (ex.: 2020 e 2023), a linha
+    é interrompida no intervalo, em vez de ligar 12/2020 direto a 01/2023.
+    """
+    return df.set_index("data").asfreq("MS").reset_index()
+
+
 # ---------------- 1. Política monetária ----------------
 def grafico_politica_monetaria(df: pd.DataFrame, indicadores: list) -> go.Figure:
     fig = go.Figure()
@@ -119,7 +128,11 @@ def grafico_dispersao(df: pd.DataFrame) -> go.Figure:
             ),
         )
     _layout(fig, "Dólar × inflação (tamanho da bolha = Selic)", "IPCA 12 meses (%)", "Dólar PTAX (R$)")
-    fig.update_layout(hovermode="closest", legend_title_text="Ano")
+    # itemsizing constante: na legenda todas as bolinhas têm o mesmo tamanho (a cor é o que identifica o ano)
+    fig.update_layout(
+        hovermode="closest",
+        legend=dict(title=dict(text="Ano:", side="left"), itemsizing="constant"),
+    )
     fig.update_xaxes(tickprefix="R$ ", tickformat=".2f", showgrid=True, gridcolor=GRADE)
     return fig
 
@@ -181,10 +194,11 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
         "🔗 Correlações",
     ])
     config = {"displaylogo": False, "locale": "pt-BR"}
+    serie = com_lacunas(df)  # para os gráficos de linha ao longo do tempo
 
     with abas[0]:
         if {"selic_meta", "ipca_12m"} & set(indicadores):
-            st.plotly_chart(grafico_politica_monetaria(df, indicadores), width="stretch", config=config)
+            st.plotly_chart(grafico_politica_monetaria(serie, indicadores), width="stretch", config=config)
             st.caption("O juro real (barras) é a Selic descontada a inflação de 12 meses: "
                        "abaixo de zero, a taxa básica não cobria a inflação.")
         else:
@@ -192,7 +206,7 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
 
     with abas[1]:
         if "dolar_ptax" in indicadores:
-            st.plotly_chart(grafico_dolar(df), width="stretch", config=config)
+            st.plotly_chart(grafico_dolar(serie), width="stretch", config=config)
             st.caption("Linha tracejada: média do dólar nos meses selecionados.")
         else:
             _precisa("**Dólar PTAX**")
@@ -207,7 +221,7 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
 
     with abas[3]:
         if "ibc_br" in indicadores:
-            st.plotly_chart(grafico_ibc_br(df), width="stretch", config=config)
+            st.plotly_chart(grafico_ibc_br(serie), width="stretch", config=config)
             st.caption("Índice dessazonalizado: retira os efeitos típicos de cada época do ano.")
         else:
             _precisa("**IBC-Br**")
