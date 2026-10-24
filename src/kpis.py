@@ -11,6 +11,7 @@ o dólar tem delta em variação percentual (%).
 from dataclasses import dataclass
 
 import pandas as pd
+import streamlit as st
 
 
 @dataclass
@@ -91,3 +92,25 @@ def calcular_kpis(filtrados: pd.DataFrame, indicadores: list) -> list[KPI]:
         ))
 
     return kpis
+
+
+def renderizar_kpis(filtrados: pd.DataFrame, indicadores: list) -> None:
+    """Mostra os KPIs lado a lado (st.columns + st.metric com borda)."""
+    kpis = calcular_kpis(filtrados, indicadores)
+    if not kpis:
+        st.caption("Os KPIs aparecem quando Selic, IPCA ou Dólar estão selecionados nos filtros.")
+        return
+
+    inicio, fim = filtrados["data"].min(), filtrados["data"].max()
+    st.subheader("📌 Indicadores-chave")
+    st.caption(f"Valores de {fim:%m/%Y} · setas comparam com {inicio:%m/%Y}")
+
+    for coluna, kpi in zip(st.columns(len(kpis)), kpis):
+        coluna.metric(
+            label=kpi.rotulo,
+            value=kpi.valor,
+            delta=kpi.delta,
+            delta_color=kpi.cor_delta,
+            help=kpi.ajuda,
+            border=True,
+        )
