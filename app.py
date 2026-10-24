@@ -1,4 +1,4 @@
-"""Painel Macroeconômico BACEN – Data App em Streamlit (em construção)."""
+"""Painel Macroeconômico BACEN – Data App em Streamlit (Projeto Final SCTEC/SENAI-SC)."""
 
 import streamlit as st
 
@@ -7,6 +7,7 @@ from src.exportacao import gerar_csv, nome_arquivo
 from src.filtros import INDICADORES, aplicar_filtros, renderizar_sidebar
 from src.graficos import renderizar_graficos
 from src.kpis import renderizar_kpis
+from src.storytelling import renderizar_limitacoes, renderizar_resumo_executivo
 
 st.set_page_config(page_title="Painel Macroeconômico BACEN", page_icon="📈", layout="wide")
 
@@ -39,12 +40,15 @@ st.caption(
     f"{len(filtrados)} de {len(dados)} meses selecionados"
 )
 
+# ---------------- Resumo executivo (topo da Pirâmide Invertida) ----------------
+renderizar_resumo_executivo(dados)
+
 # ---------------- KPIs ----------------
 renderizar_kpis(filtrados, indicadores)
 
 # ---------------- Gráficos ----------------
 st.divider()
-renderizar_graficos(filtrados, indicadores)
+renderizar_graficos(filtrados, indicadores, dados)
 
 # ---------------- Exportação e tabela ----------------
 st.divider()
@@ -71,3 +75,8 @@ with st.expander("📋 Ver os dados filtrados em tabela"):
         hide_index=True,
         column_config={"data": st.column_config.DateColumn("Mês", format="MM/YYYY")},
     )
+
+# ---------------- Limitações ----------------
+st.divider()
+renderizar_limitacoes()
+st.caption(f"Fonte: SGS/Banco Central do Brasil · séries 432, 433, 13522, 1 e 24364 · Origem: {origem}")
