@@ -14,6 +14,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from src import storytelling as story
 from src.indicadores import VARIAVEIS_CORRELACAO, matriz_correlacao
 
 # ---------------- Paleta (validada para daltonismo) ----------------
@@ -184,7 +185,12 @@ def _precisa(texto: str) -> None:
     st.info(f"Para ver este gráfico, selecione {texto} nos filtros da barra lateral.")
 
 
-def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
+def renderizar_graficos(df: pd.DataFrame, indicadores: list, completos: pd.DataFrame) -> None:
+    """Abas de análise: em cada uma, a resposta à pergunta de negócio (Pirâmide Invertida)
+    e, logo abaixo, os gráficos que servem de evidência.
+
+    `df` = base filtrada (gráficos); `completos` = quinquênio inteiro (respostas).
+    """
     st.subheader("📊 Análise gráfica")
     abas = st.tabs([
         "🏦 Política monetária",
@@ -197,6 +203,7 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
     serie = com_lacunas(df)  # para os gráficos de linha ao longo do tempo
 
     with abas[0]:
+        story.renderizar_resposta(story.resposta_selic(completos))
         if {"selic_meta", "ipca_12m"} & set(indicadores):
             st.plotly_chart(grafico_politica_monetaria(serie, indicadores), width="stretch", config=config)
             st.caption("O juro real (barras) é a Selic descontada a inflação de 12 meses: "
@@ -205,6 +212,7 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
             _precisa("**Selic Meta** ou **IPCA 12 meses**")
 
     with abas[1]:
+        story.renderizar_resposta(story.resposta_dolar(completos))
         if "dolar_ptax" in indicadores:
             st.plotly_chart(grafico_dolar(serie), width="stretch", config=config)
             st.caption("Linha tracejada: média do dólar nos meses selecionados.")
@@ -212,6 +220,11 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
             _precisa("**Dólar PTAX**")
 
     with abas[2]:
+        resposta, defasagens = story.resposta_cambio_inflacao(completos)
+        story.renderizar_resposta(resposta)
+        st.plotly_chart(story.grafico_defasagem(defasagens), width="stretch", config=config)
+        st.caption("Cada barra compara a alta do dólar em 12 meses com o IPCA 12M k meses depois "
+                   "(quinquênio completo). Barras vermelhas: andam juntos; azuis: em sentidos opostos.")
         if {"dolar_ptax", "ipca_12m"} <= set(indicadores):
             st.plotly_chart(grafico_dispersao(df), width="stretch", config=config)
             st.caption("Cada bolha é um mês. Cores mais escuras são anos mais recentes; "
@@ -220,6 +233,7 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
             _precisa("**Dólar PTAX** e **IPCA 12 meses**")
 
     with abas[3]:
+        story.renderizar_resposta(story.resposta_atividade(completos)[0])
         if "ibc_br" in indicadores:
             st.plotly_chart(grafico_ibc_br(serie), width="stretch", config=config)
             st.caption("Índice dessazonalizado: retira os efeitos típicos de cada época do ano.")
@@ -227,6 +241,7 @@ def renderizar_graficos(df: pd.DataFrame, indicadores: list) -> None:
             _precisa("**IBC-Br**")
 
     with abas[4]:
+        story.renderizar_resposta(story.resposta_correlacoes(completos))
         if len(variaveis_correlacao(indicadores)) < 2:
             _precisa("pelo menos **dois indicadores**")
         elif len(df) < 3:
