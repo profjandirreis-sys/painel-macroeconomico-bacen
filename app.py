@@ -4,6 +4,7 @@ import streamlit as st
 
 from src.dados import carregar_dados
 from src.filtros import INDICADORES, aplicar_filtros, renderizar_sidebar
+from src.graficos import renderizar_graficos
 from src.kpis import renderizar_kpis
 
 st.set_page_config(page_title="Painel Macroeconômico BACEN", page_icon="📈", layout="wide")
@@ -40,12 +41,16 @@ st.caption(
 # ---------------- KPIs ----------------
 renderizar_kpis(filtrados, indicadores)
 
+# ---------------- Gráficos ----------------
 st.divider()
-st.info("Aplicação em construção. Prévia dos dados filtrados:")
-colunas = ["data"] + indicadores
-st.dataframe(
-    filtrados[colunas].rename(columns=INDICADORES),
-    width="stretch",
-    hide_index=True,
-    column_config={"data": st.column_config.DateColumn("Mês", format="MM/YYYY")},
-)
+renderizar_graficos(filtrados, indicadores)
+
+# ---------------- Tabela (dados dos gráficos) ----------------
+with st.expander("📋 Ver os dados filtrados em tabela"):
+    colunas = ["data"] + indicadores
+    st.dataframe(
+        filtrados[colunas].rename(columns=INDICADORES),
+        width="stretch",
+        hide_index=True,
+        column_config={"data": st.column_config.DateColumn("Mês", format="MM/YYYY")},
+    )
