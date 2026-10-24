@@ -3,6 +3,7 @@
 import streamlit as st
 
 from src.dados import carregar_dados
+from src.exportacao import gerar_csv, nome_arquivo
 from src.filtros import INDICADORES, aplicar_filtros, renderizar_sidebar
 from src.graficos import renderizar_graficos
 from src.kpis import renderizar_kpis
@@ -45,7 +46,23 @@ renderizar_kpis(filtrados, indicadores)
 st.divider()
 renderizar_graficos(filtrados, indicadores)
 
-# ---------------- Tabela (dados dos gráficos) ----------------
+# ---------------- Exportação e tabela ----------------
+st.divider()
+col_texto, col_botao = st.columns([3, 1], vertical_alignment="center")
+col_texto.markdown(
+    f"**💾 Exportar dados** · {len(filtrados)} meses filtrados, com todas as colunas da base "
+    "(formato do Excel em português: separador `;` e vírgula decimal)."
+)
+col_botao.download_button(
+    "⬇️ Baixar CSV",
+    data=gerar_csv(filtrados),
+    file_name=nome_arquivo(filtrados),
+    mime="text/csv",
+    type="primary",
+    width="stretch",
+    on_click="ignore",  # baixar não recarrega o app nem altera os filtros
+)
+
 with st.expander("📋 Ver os dados filtrados em tabela"):
     colunas = ["data"] + indicadores
     st.dataframe(
