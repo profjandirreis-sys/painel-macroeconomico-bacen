@@ -242,8 +242,8 @@ def grafico_defasagem(defas: pd.DataFrame):
         title="Alta do dólar em 12 meses × IPCA 12M k meses depois",
     )
     fig.update_layout(
-        separators=",.", template="plotly_white", height=330, barcornerradius=4,
-        margin=dict(l=10, r=10, t=60, b=10), legend=dict(orientation="h", y=1.02, x=0, yanchor="bottom"),
+        separators=",.", template="plotly_white", height=350, barcornerradius=4,
+        margin=dict(l=10, r=10, t=85, b=10), legend=dict(orientation="h", y=1.04, x=0, yanchor="bottom"),
         title=dict(font=dict(size=15), x=0),
     )
     fig.update_traces(hovertemplate="k = %{x} meses<br>r = %{y:.2f}<extra></extra>")
