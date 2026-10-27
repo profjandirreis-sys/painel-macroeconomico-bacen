@@ -1,0 +1,7 @@
+streamlit>=1.50  # versão mínima testada: usa width="stretch" e on_click="ignore"
+pandas>=2.2
+numpy>=2.0
+plotly>=5.24
+requests>=2.32
+sqlalchemy>=2.0
+psycopg[binary]>=3.2
