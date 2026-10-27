@@ -1,4 +1,4 @@
-streamlit>=1.40
+streamlit>=1.50  # versão mínima testada: usa width="stretch" e on_click="ignore"
 pandas>=2.2
 numpy>=1.26
 plotly>=5.24
