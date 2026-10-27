@@ -324,6 +324,8 @@ painel-macroeconomico-bacen/
 
 ![Quadro Kanban do projeto no Trello](docs/img/trello_quadro.png)
 
+_Quadro em 27/10/2026, durante a escrita deste README: 15 cards concluídos, 1 em andamento e os 2 últimos (vídeo e entrega) no Backlog._
+
 ## 14. Autoria e créditos
 
 **Jandir Reis**: estudante de Visualização de Dados e BI (SCTEC/SENAI-SC) e de Inteligência Artificial e Ciência de Dados, em transição de carreira da educação para a área de dados.
